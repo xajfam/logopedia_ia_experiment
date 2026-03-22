@@ -10,7 +10,9 @@ export default function Home() {
   // Formulari de configuració
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pipeline, setPipeline] = useState<"gemini" | "local">("local");
-  const [localModel, setLocalModel] = useState<"whisper" | "whisper_allosaurus">("whisper_allosaurus");
+  const [localModel, setLocalModel] = useState<"whisper" | "whisper_allosaurus" | "whisper_cli">("whisper_cli");
+  const [cliModel, setCliModel] = useState<"ggml-large-v3.bin" | "ggml-small.bin">("ggml-large-v3.bin");
+  const [usePrintColors, setUsePrintColors] = useState(true); // Per defecte habilitat per a whisper-cli
   const [useDiarization, setUseDiarization] = useState(false);
   
   // Clàus d'API (Opcionals)
@@ -42,6 +44,8 @@ export default function Home() {
       formData.append("file", selectedFile);
       formData.append("pipeline", pipeline);
       formData.append("localModel", pipeline === "local" ? localModel : "");
+      formData.append("cliModel", cliModel);
+      formData.append("printColors", usePrintColors.toString());
       formData.append("diarization", useDiarization.toString());
       formData.append("geminiKey", geminiKey);
       formData.append("hfToken", hfToken);
@@ -159,14 +163,46 @@ export default function Home() {
                 <label className="block text-sm font-semibold text-slate-700 mb-3">Model d'Extracció Fonètica</label>
                 <div className="flex flex-col gap-3">
                   <label className="flex items-center gap-3">
+                    <input type="radio" value="whisper_cli" checked={localModel === 'whisper_cli'} onChange={() => setLocalModel('whisper_cli')} className="text-orange-500 focus:ring-orange-500" />
+                    <span className="text-sm text-slate-800 font-medium">Whisper CLI (Executable en C++ per Màxim Rendiment ggml)</span>
+                  </label>
+                  <label className="flex items-center gap-3">
                     <input type="radio" value="whisper_allosaurus" checked={localModel === 'whisper_allosaurus'} onChange={() => setLocalModel('whisper_allosaurus')} className="text-orange-500 focus:ring-orange-500" />
-                    <span className="text-sm text-slate-800">Whisper (Base) + Allosaurus (Processament de Lletres/IPA)</span>
+                    <span className="text-sm text-slate-800">Whisper (Python) + Allosaurus (Processament de Lletres/IPA)</span>
                   </label>
                   <label className="flex items-center gap-3">
                     <input type="radio" value="whisper" checked={localModel === 'whisper'} onChange={() => setLocalModel('whisper')} className="text-orange-500 focus:ring-orange-500" />
-                    <span className="text-sm text-slate-800">Només Whisper (Strict Format / Sense Correcció Grammar)</span>
+                    <span className="text-sm text-slate-800">Només Whisper Python (Sense Correcció Grammar)</span>
                   </label>
                 </div>
+                {localModel === 'whisper_cli' && (
+                  <div className="mt-4 pl-8 border-l-2 border-orange-100 flex flex-col gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Selecciona el model (ggml)</label>
+                      <select 
+                        value={cliModel} 
+                        onChange={(e) => setCliModel(e.target.value as any)}
+                        className="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                      >
+                        <option value="ggml-large-v3.bin">ggml-large-v3.bin (Més precís, l'estàndard principal)</option>
+                        <option value="ggml-small.bin">ggml-small.bin (Més ràpid, però de menys precisió semàntica)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={usePrintColors} 
+                          onChange={(e) => setUsePrintColors(e.target.checked)}
+                          className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 border-slate-300" 
+                        />
+                        <div className="text-sm font-medium text-slate-700">Habilitar formatatge amb <code className="bg-orange-100 font-mono text-xs px-1 rounded text-orange-800">--print-colors</code></div>
+                      </label>
+                      <p className="text-xs text-slate-500 mt-1 pl-7">Pot mostrar visualment en la transcripció el canvi de colors per nivell de confiança.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -52,6 +52,49 @@ def test_whisper_strict(audio_path):
     return result
 
 
+def test_whisper_cli(audio_path, model_path="/Users/jordiagramunt/.cache/huggingface/hub/whisper-models/ggml-large-v3.bin", print_colors=False):
+    """
+    Fase 3 - Opció 5: Reconeixement per whisper-cli utilitzant models ggml amb alta densitat / velocitat
+    """
+    print(f"\n[+] Inicialitzant Whisper CLI amb el model: {os.path.basename(model_path)}...")
+    if not os.path.exists(model_path):
+        print(f"Error: No s'ha trobat el model a {model_path}.")
+        return {"text": f"Error: No s'ha trobat el model a {model_path}."}
+        
+    command = [
+        "whisper-cli",
+        "-t", "8",
+        "-m", model_path,
+        "-f", audio_path,
+        "-l", "ca"
+    ]
+    
+    if print_colors:
+        command.append("--print-colors")
+        
+    try:
+        print(f"[*] Executant: {' '.join(command)}")
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        # whisper-cli habitualment posa l'output de transcripció a stdout (de vegades els temps hi van o els logs a stderr)
+        out_text = result.stdout.strip()
+        
+        base_name = os.path.splitext(audio_path)[0]
+        out_file = f"{base_name}_whisper_cli_output.txt"
+        with open(out_file, "w", encoding="utf-8") as f:
+            f.write(f"--- Resultat Whisper CLI ({'amb colors' if print_colors else 'sense colors'}) ---\n")
+            f.write(out_text + "\n")
+            
+        print(f"\n[*] Resultats desats a: {out_file}")
+        return {"text": out_text}
+        
+    except FileNotFoundError:
+        print("Error: 'whisper-cli' no està instal·lat o no està al PATH (potser cal compilar-lo primer o enllaçar-lo).")
+        return {"text": "Error: 'whisper-cli' no s'ha trobat instal·lat en aquesta màquina com a eixecutable de directori."}
+    except subprocess.CalledProcessError as e:
+        print(f"Error durant l'execució de whisper-cli: {e}")
+        return {"text": f"L'execució ha fallat: {e.stderr}"}
+
+
 def test_allosaurus(audio_path):
     """
     Fase 3 - Opció 1: Reconeixement de Fonemes i Alfabet Fonètic (IPA/AFI)
@@ -238,7 +281,7 @@ def extract_audio_from_video(file_path):
 def main():
     parser = argparse.ArgumentParser(description="PoC Tecnologies Logopèdia (Fase 3)")
     parser.add_argument("audio_path", help="Ruta a l'arxiu d'àudio de prova (.wav, .mp3, etc.)")
-    parser.add_argument("--test", choices=["whisper", "allosaurus", "diarization", "gemini", "all"], default="all",
+    parser.add_argument("--test", choices=["whisper", "whisper-cli", "allosaurus", "diarization", "gemini", "all"], default="all",
                         help="Quina validació vols córrer? (per defecte: all)")
     parser.add_argument("--hf-token", help="Token de HuggingFace (Opcional, només per --test diarization)")
     parser.add_argument("--gemini-key", help="Clau d'API de Google AI Studio (Obligatori per --test gemini)")
@@ -260,6 +303,9 @@ def main():
 
     if args.test in ["whisper", "all"]:
         test_whisper_strict(processed_audio_path)
+        
+    if args.test == "whisper-cli":
+        test_whisper_cli(processed_audio_path)
         
     if args.test in ["gemini", "all"]:
         test_gemini(processed_audio_path, args.gemini_key)

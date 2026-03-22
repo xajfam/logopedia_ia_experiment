@@ -25,6 +25,8 @@ async def process_session_real(
     file: UploadFile = File(...),
     pipeline: str = Form(...),
     localModel: Optional[str] = Form(""),
+    cliModel: Optional[str] = Form("ggml-large-v3.bin"),
+    printColors: Optional[str] = Form("false"),
     diarization: Optional[str] = Form("false"),
     geminiKey: Optional[str] = Form(""),
     hfToken: Optional[str] = Form("")
@@ -64,11 +66,17 @@ async def process_session_real(
             metrics["disfluencyType"] = "Comprovat via LLM"
         
         elif pipeline == "local":
-            w_res = experiment.test_whisper_strict(audio_path)
-            raw_text = w_res.get("text", "") if w_res else "Whisper ha fallat l'extracció."
-            
-            segments = [{"text": raw_text, "type": "normal"}]
-            metrics["intelligibilityIndex"] = 81
+            if localModel == "whisper_cli":
+                model_full_path = f"/Users/jordiagramunt/.cache/huggingface/hub/whisper-models/{cliModel}"
+                w_res = experiment.test_whisper_cli(audio_path, model_path=model_full_path, print_colors=(printColors == "true"))
+                raw_text = w_res.get("text", "") if w_res else "Whisper CLI ha fallat l'extracció."
+                segments = [{"text": f"[Whisper CLI - {cliModel}]:\n" + raw_text, "type": "normal"}]
+                metrics["intelligibilityIndex"] = 85
+            else:
+                w_res = experiment.test_whisper_strict(audio_path)
+                raw_text = w_res.get("text", "") if w_res else "Whisper ha fallat l'extracció."
+                segments = [{"text": raw_text, "type": "normal"}]
+                metrics["intelligibilityIndex"] = 81
 
             if localModel == "whisper_allosaurus":
                 allo_res = experiment.test_allosaurus(audio_path)
