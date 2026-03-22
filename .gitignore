@@ -1,0 +1,24 @@
+# Entorns virtuals
+venv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arxius multimèdia de proves (Molt importants d'ignorar per la seva mida)
+*.mp4
+*.wav
+*.mp3
+*.m4a
+
+# Arxius del sistema operatiu
+.DS_Store
+
+# Directoris tipus Node.js (pel frontend)
+node_modules/
+.next/
+out/
+build/
